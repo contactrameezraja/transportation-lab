@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light dark}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Transportation Problem Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column of three stacked "labs", each a worked object (table + network or plan grid) beside its readout */
+:root{
+  --bg:#f6f7f8; --panel:#ffffff; --fg:#1b2129; --muted:#5d6775; --line:#d5dae1; --soft:#eef1f4;
+  --accent:#1f5f74; --accent-soft:#dcebf0; --pos:#2f7d4f; --pos-soft:#e1f1e6; --neg:#b3392f; --neg-soft:#f7e1de;
+  --serif:"IBM Plex Serif", Georgia, serif; --sans:"IBM Plex Sans", system-ui, sans-serif; --mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13171c; --panel:#1b2128; --fg:#e6eaef; --muted:#9aa5b2; --line:#334050; --soft:#222a33;
+  --accent:#7cc0d4; --accent-soft:#1f3640; --pos:#7fcf9c; --pos-soft:#1d3527; --neg:#f08a7f; --neg-soft:#3d2321; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13171c; --panel:#1b2128; --fg:#e6eaef; --muted:#9aa5b2; --line:#334050; --soft:#222a33;
+  --accent:#7cc0d4; --accent-soft:#1f3640; --pos:#7fcf9c; --pos-soft:#1d3527; --neg:#f08a7f; --neg-soft:#3d2321; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--serif);font-weight:600;font-size:2rem;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:600;font-size:1.3rem;margin:0;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:0 0 22px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:18px}
+.head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;margin-bottom:12px}
+.note{color:var(--muted);font-size:.9rem;max-width:72ch;margin:4px 0 0}
+.grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.scroll{overflow-x:auto}
+table.tp{border-collapse:collapse;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:.9rem}
+table.tp th{font-family:var(--serif);font-weight:500;font-style:italic;padding:4px 8px;color:var(--muted)}
+table.tp td{border:1px solid var(--line);width:68px;height:56px;position:relative;text-align:center;vertical-align:middle;padding:0}
+table.tp td.edge{border:none;width:auto;padding:0 10px;color:var(--fg)}
+td .cost{position:absolute;top:0;right:0;border-left:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.72rem;padding:0 4px;color:var(--muted);background:var(--panel)}
+td.basic{background:var(--accent-soft)}
+td .amt{font-size:1.05rem;font-weight:600}
+td .rc{font-size:.8rem}
+td .rc.neg{color:var(--neg);font-weight:600}
+td .rc.pos{color:var(--pos)}
+td.enter{outline:2px dashed var(--neg);outline-offset:-3px}
+td .sign{position:absolute;bottom:2px;left:4px;font-size:.75rem;font-weight:600;color:var(--accent)}
+input.num{width:52px;font:inherit;font-family:var(--mono);font-size:.9rem;padding:3px 4px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--fg);text-align:center}
+input.cnum{width:34px;font-size:.72rem;padding:1px 2px;position:absolute;top:2px;right:2px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+button{font:inherit;font-size:.9rem;font-weight:500;padding:7px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.readout{display:grid;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.92rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.status{border-left:3px solid var(--accent);background:var(--soft);padding:10px 12px;border-radius:0 6px 6px 0;font-size:.92rem}
+.status.ok{border-color:var(--pos)} .status.warn{border-color:var(--neg)}
+.pill{display:inline-block;font-family:var(--mono);font-size:.75rem;padding:1px 8px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.pill.ok{background:var(--pos-soft);color:var(--pos)} .pill.bad{background:var(--neg-soft);color:var(--neg)}
+svg text{fill:var(--fg);font-family:var(--serif)}
+svg .lbl{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+label{font-size:.9rem;color:var(--muted)}
+select{font:inherit;font-size:.9rem;padding:4px 6px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+input[type=range]{width:min(320px,100%);accent-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.82rem;color:var(--muted);margin-top:6px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+footer{color:var(--muted);font-size:.82rem;margin-top:22px;max-width:80ch}
+@media (prefers-reduced-motion:no-preference){td,circle{transition:background .2s, r .25s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">MATH11111 Fundamentals of Optimization · supplementary material</div>
+  <h1>Transportation Problem Lab</h1>
+  <p class="lede">An interactive companion to our report on the 3 by 4 example. Edit supplies, demands or unit costs, then step through the simplex method on a tree, test the dual variables as shadow prices, and watch the Sinkhorn plan approach the exact one as ε shrinks. Notation follows the MATH11111 lecture notes.</p>
+
+  <section aria-labelledby="dataH">
+    <div class="head"><h2 id="dataH">Data</h2><span class="pill" id="balPill">balanced</span></div>
+    <div class="scroll"><table class="tp" id="dataTable"></table></div>
+    <div class="controls"><button class="ghost" id="resetBtn">Reset to the report's example</button></div>
+    <p class="note">Unit costs c<sub>ij</sub> sit in the corner of each cell. Total supply must equal total demand. Changing any value restarts all three labs.</p>
+  </section>
+
+  <section aria-labelledby="s1H">
+    <div class="head"><div><div class="eyebrow">Lab 1 · Lectures 15 to 18, 25</div><h2 id="s1H">The simplex method on a spanning tree</h2></div><span class="pill" id="iterPill">iteration 0</span></div>
+    <p class="note">Start from the northwest corner vertex. Each step computes the prices ŷ = (A<sub>B</sub><sup>−1</sup>)<sup>T</sup>c<sub>B</sub> along the tree with u<sub>1</sub> = 0, the reduced costs c̄<sub>ij</sub> = c<sub>ij</sub> − u<sub>i</sub> − v<sub>j</sub>, then the direction d round the cycle and the step λ*.</p>
+    <div class="controls">
+      <button id="stepBtn">Next step</button>
+      <button class="ghost" id="solveBtn">Run to optimum</button>
+      <button class="ghost" id="restartBtn">Back to northwest corner</button>
+    </div>
+    <div class="grid2">
+      <div class="scroll"><table class="tp" id="simTable"></table>
+        <div class="legend"><span><span class="sw" style="background:var(--accent-soft)"></span>basic route (in B)</span><span><span class="rc neg" style="color:var(--neg)">(−)</span> negative reduced cost</span><span><span style="color:var(--accent);font-weight:600">+ / −</span> sign of d on the cycle</span></div>
+      </div>
+      <div class="readout">
+        <svg id="net" viewBox="0 0 320 230" role="img" aria-label="Spanning tree of the current basis"></svg>
+        <div class="status" id="simStatus"></div>
+        <dl class="kv" id="simKV"></dl>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s2H">
+    <div class="head"><div><div class="eyebrow">Lab 2 · Lectures 24 and 27</div><h2 id="s2H">Dual variables as shadow prices</h2></div></div>
+    <p class="note">Supply and demand must stay balanced, so the only allowed change adds k units at one supply point and k at one demand point. The optimal dual solution predicts a cost change of k(u<sub>i</sub> + v<sub>j</sub>), and the prediction holds while the optimal basis stays optimal. Re-solving checks it.</p>
+    <div class="row" style="margin:12px 0">
+      <label for="shS">Supply point</label><select id="shS"></select>
+      <label for="shD">Demand point</label><select id="shD"></select>
+      <label for="shK">Extra units k = <b id="shKv">1</b></label><input type="range" id="shK" min="1" max="40" value="1">
+    </div>
+    <div class="grid2">
+      <svg id="shChart" viewBox="0 0 420 210" role="img" aria-label="Predicted and actual cost change"></svg>
+      <div class="readout"><div class="status" id="shStatus"></div><dl class="kv" id="shKV"></dl></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s3H">
+    <div class="head"><div><div class="eyebrow">Lab 3 · Section 4 of the report</div><h2 id="s3H">Sinkhorn and soft complementary slackness</h2></div></div>
+    <p class="note">The entropic plan is P<sub>ij</sub> = exp((u<sub>i</sub> + v<sub>j</sub> − c<sub>ij</sub>)/ε), so every route carries mass that shrinks with its reduced cost. Circles show amounts. Colour shows the reduced cost at the exact optimum, green for zero (a basic route) and darker red for larger positive values.</p>
+    <div class="row" style="margin:12px 0"><label for="eps">ε = <b id="epsV"></b></label><input type="range" id="eps" min="0" max="1000" value="600"></div>
+    <div class="grid2">
+      <svg id="plan" viewBox="0 0 360 230" role="img" aria-label="Sinkhorn plan"></svg>
+      <div class="readout">
+        <svg id="epsChart" viewBox="0 0 360 170" role="img" aria-label="Sinkhorn cost against epsilon"></svg>
+        <dl class="kv" id="skKV"></dl>
+      </div>
+    </div>
+  </section>
+
+  <footer>Built by Karim Gasimov, Rameez Raja and Shayan Rezaei with the help of Claude (Anthropic), as declared in the report's appendix. Everything is computed in your browser from the data above; with the report's example it reproduces the figures in the report (northwest corner cost 430, first pivot to 330, optimum 265 with prices u = (0, −1, 0), v = (5, 5, 3, 3)). Sources: MATH11111 lecture notes; Peyré and Cuturi (2019); Cuturi (2013).</footer>
+</div>
+
+<script>
+const M=3,N=4;
+const EX={s:[20,30,25],d:[15,20,25,15],C:[[6,5,4,3],[7,7,2,2],[5,5,9,6]]};
+let S=EX.s.slice(),D=EX.d.slice(),C=EX.C.map(r=>r.slice());
+const $=id=>document.getElementById(id);
+const sum=a=>a.reduce((p,q)=>p+q,0);
+const fmt=(x,dp=0)=>{const v=Math.abs(x)<1e-9?0:x;return (v<0?'−':'')+Math.abs(v).toFixed(dp)};
+
+/* ---------- transportation simplex (MODI) ---------- */
+function nwCorner(s,d){
+  const ss=s.slice(),dd=d.slice(),x=[...Array(M)].map(()=>Array(N).fill(0)),B=[];
+  let i=0,j=0;
+  while(i<M&&j<N){
+    const q=Math.min(ss[i],dd[j]);x[i][j]=q;B.push([i,j]);ss[i]-=q;dd[j]-=q;
+    if(i===M-1&&j===N-1)break;
+    if(ss[i]===0&&dd[j]===0){ if(i<M-1)i++; else j++; } // degenerate step: keep the tree spanning
+    else if(ss[i]===0)i++; else j++;
+  }
+  return {x,B};
+}
+const inB=(B,i,j)=>B.some(b=>b[0]===i&&b[1]===j);
+function prices(B){
+  const u=Array(M).fill(null),v=Array(N).fill(null);u[0]=0;
+  for(let k=0;k<M+N;k++)for(const [i,j] of B){
+    if(u[i]!==null&&v[j]===null)v[j]=C[i][j]-u[i];
+    else if(v[j]!==null&&u[i]===null)u[i]=C[i][j]-v[j];
+  }
+  return {u,v};
+}
+function reduced(B,u,v){const r=[...Array(M)].map(()=>Array(N).fill(null));
+  for(let i=0;i<M;i++)for(let j=0;j<N;j++)if(!inB(B,i,j))r[i][j]=C[i][j]-u[i]-v[j];return r}
+function cycleFor(B,k,l){ // path in tree from demand l to supply k
+  const adj=[...Array(M+N)].map(()=>[]);
+  for(const [i,j] of B){adj[i].push([M+j,i,j]);adj[M+j].push([i,i,j]);}
+  const start=M+l,goal=k,prev=Array(M+N).fill(null),seen=Array(M+N).fill(false);const q=[start];seen[start]=true;
+  while(q.length){const a=q.shift();if(a===goal)break;for(const [b,i,j] of adj[a])if(!seen[b]){seen[b]=true;prev[b]=[a,i,j];q.push(b);}}
+  const path=[];let node=goal;while(node!==start){const [a,i,j]=prev[node];path.push([i,j]);node=a;}
+  path.reverse(); // from D_l to S_k
+  const cyc=[[k,l,+1]];path.forEach((e,t)=>cyc.push([e[0],e[1],t%2===0?-1:+1]));return cyc;
+}
+function chooseEntering(r,x,B){
+  const degenerate=B.some(([i,j])=>x[i][j]===0);let best=null;
+  for(let i=0;i<M;i++)for(let j=0;j<N;j++){const c=r[i][j];if(c===null||c>=-1e-9)continue;
+    if(best===null)best=[i,j];else if(!degenerate&&c<r[best[0]][best[1]]-1e-9)best=[i,j];}
+  return {best,degenerate}; // Bland's rule (smallest index) at a degenerate vertex, otherwise most negative
+}
+function pivot(state,cyc){
+  const minus=cyc.filter(e=>e[2]<0);let th=Infinity;minus.forEach(([i,j])=>th=Math.min(th,state.x[i][j]));
+  let leave=null;for(const [i,j] of minus)if(state.x[i][j]===th&&(leave===null||i*N+j<leave[0]*N+leave[1]))leave=[i,j];
+  cyc.forEach(([i,j,sg])=>state.x[i][j]+=sg*th);
+  state.B=state.B.filter(b=>!(b[0]===leave[0]&&b[1]===leave[1]));state.B.push([cyc[0][0],cyc[0][1]]);
+  return {th,leave};
+}
+const cost=x=>{let t=0;for(let i=0;i<M;i++)for(let j=0;j<N;j++)t+=C[i][j]*x[i][j];return t};
+function solve(s,d){
+  const st=nwCorner(s,d);
+  for(let it=0;it<200;it++){const {u,v}=prices(st.B),r=reduced(st.B,u,v),{best}=chooseEntering(r,st.x,st.B);
+    if(!best)return {x:st.x,B:st.B,u,v,r,cost:cost(st.x)};pivot(st,cycleFor(st.B,best[0],best[1]));}
+  return null;
+}
+
+/* ---------- Lab 1 state machine ---------- */
+let sim,phase,iter,lastMsg;
+function restartSim(){sim=nwCorner(S,D);phase='prices';iter=0;sim.u=null;sim.cyc=null;
+  lastMsg='Northwest corner vertex. It uses '+sim.B.length+' = m + n − 1 routes, which form a spanning tree. Press Next step to compute the prices.';renderSim();}
+function step(){
+  if(phase==='done')return;
+  if(phase==='prices'){const p=prices(sim.B);sim.u=p.u;sim.v=p.v;sim.r=reduced(sim.B,p.u,p.v);
+    const {best,degenerate}=chooseEntering(sim.r,sim.x,sim.B);sim.enter=best;
+    if(!best){phase='done';lastMsg='All reduced costs are nonnegative, so this vertex is optimal (Corollary 15.4). The prices are a dual optimal solution and the dual value equals the cost (Proposition 22.2).';}
+    else{const c=sim.r[best[0]][best[1]];lastMsg='Prices found along the tree from u₁ = 0. Route ('+(best[0]+1)+','+(best[1]+1)+') has c̄ = '+fmt(c)+' < 0, '+(degenerate?'chosen by Bland\'s rule because this vertex is degenerate (Proposition 19.1).':'the most negative reduced cost.')+' Press Next step to see the direction d.';phase='cycle';}
+  }else if(phase==='cycle'){sim.cyc=cycleFor(sim.B,sim.enter[0],sim.enter[1]);
+    const minus=sim.cyc.filter(e=>e[2]<0);const th=Math.min(...minus.map(([i,j])=>sim.x[i][j]));
+    lastMsg='The entering route closes one cycle. d has +1 and −1 alternately round it, so c<sup>T</sup>d = c̄ = '+fmt(sim.r[sim.enter[0]][sim.enter[1]])+'. The ratio test gives λ* = '+fmt(th)+', the smallest amount on a − route'+(th===0?' (a degenerate pivot: the plan will not move).':'.')+' Press Next step to pivot.';phase='pivot';
+  }else if(phase==='pivot'){const before=cost(sim.x),c=sim.r[sim.enter[0]][sim.enter[1]];const {th,leave}=pivot(sim,sim.cyc);iter++;
+    lastMsg='Pivot: route ('+(sim.enter[0]+1)+','+(sim.enter[1]+1)+') enters, route ('+(leave[0]+1)+','+(leave[1]+1)+') leaves. The cost changes by λ*·c̄ = '+fmt(th)+' × '+fmt(c)+' = '+fmt(th*c)+', from '+fmt(before)+' to '+fmt(cost(sim.x))+' (Lecture 17).';
+    sim.cyc=null;sim.u=null;sim.enter=null;phase='prices';}
+  renderSim();
+}
+function renderSim(){
+  const t=$('simTable');let h='<tr><th></th>'+[...Array(N)].map((_,j)=>'<th>D'+(j+1)+'</th>').join('')+'<th>s<sub>i</sub></th><th>u<sub>i</sub></th></tr>';
+  const sg={};if(sim.cyc)sim.cyc.forEach(([i,j,s])=>sg[i+','+j]=s);
+  for(let i=0;i<M;i++){h+='<tr><th>S'+(i+1)+'</th>';
+    for(let j=0;j<N;j++){const b=inB(sim.B,i,j),en=sim.enter&&sim.enter[0]===i&&sim.enter[1]===j&&phase!=='prices';
+      let inner='<span class="cost">'+C[i][j]+'</span>';
+      if(b)inner+='<span class="amt">'+sim.x[i][j]+'</span>';
+      else if(sim.u&&sim.r[i][j]!==null){const c=sim.r[i][j];inner+='<span class="rc '+(c<-1e-9?'neg':'pos')+'">('+fmt(c)+')</span>';}
+      if(sg[i+','+j])inner+='<span class="sign">'+(sg[i+','+j]>0?'+':'−')+'</span>';
+      h+='<td class="'+(b?'basic':'')+(en?' enter':'')+'">'+inner+'</td>';}
+    h+='<td class="edge">'+S[i]+'</td><td class="edge">'+(sim.u?fmt(sim.u[i]):'·')+'</td></tr>';}
+  h+='<tr><th>d<sub>j</sub></th>'+D.map(x=>'<td class="edge">'+x+'</td>').join('')+'</tr>';
+  h+='<tr><th>v<sub>j</sub></th>'+D.map((_,j)=>'<td class="edge">'+(sim.u?fmt(sim.v[j]):'·')+'</td>').join('')+'</tr>';
+  t.innerHTML=h;
+  drawNet();
+  $('iterPill').textContent='iteration '+iter;
+  const st=$('simStatus');st.innerHTML=lastMsg;st.className='status'+(phase==='done'?' ok':'');
+  const z=cost(sim.x);let kv='<dt>Cost c<sup>T</sup>x</dt><dd>'+fmt(z)+'</dd><dt>Basic routes |B|</dt><dd>'+sim.B.length+' (m + n − 1 = '+(M+N-1)+')</dd>';
+  const used=sim.B.filter(([i,j])=>sim.x[i][j]>0).length;kv+='<dt>Routes used |B̂|</dt><dd>'+used+(used<M+N-1?' · degenerate (Def. 16.2)':'')+'</dd>';
+  if(sim.u){const dv=sum(S.map((s,i)=>s*sim.u[i]))+sum(D.map((d,j)=>d*sim.v[j]));kv+='<dt>Dual value b<sup>T</sup>ŷ</dt><dd>'+fmt(dv)+(phase==='done'?' = cost':'')+'</dd>';}
+  $('simKV').innerHTML=kv;
+  $('stepBtn').disabled=phase==='done';$('solveBtn').disabled=phase==='done';
+}
+function drawNet(){
+  const sv=$('net'),sy=i=>40+i*75,dy=j=>25+j*58,sx=60,dx=260;let g='';
+  const sg={};if(sim.cyc)sim.cyc.forEach(([i,j,s])=>sg[i+','+j]=s);
+  for(let i=0;i<M;i++)for(let j=0;j<N;j++){const b=inB(sim.B,i,j),c=sg[i+','+j];
+    if(!b&&!c)continue;const dash=(!b&&c)?' stroke-dasharray="5 4"':'';
+    g+='<line x1="'+sx+'" y1="'+sy(i)+'" x2="'+dx+'" y2="'+dy(j)+'" stroke="'+(c?'var(--accent)':'var(--muted)')+'" stroke-width="'+(c?2.6:1.4)+'"'+dash+'/>';
+    if(c){const mx=sx+(dx-sx)*0.55,my=sy(i)+(dy(j)-sy(i))*0.55;g+='<rect x="'+(mx-9)+'" y="'+(my-9)+'" width="18" height="16" rx="3" fill="var(--panel)"/><text x="'+mx+'" y="'+(my+3)+'" text-anchor="middle" font-size="13" style="fill:var(--accent)">'+(c>0?'+':'−')+'</text>';}}
+  for(let i=0;i<M;i++)g+='<circle cx="'+sx+'" cy="'+sy(i)+'" r="15" fill="var(--panel)" stroke="var(--fg)"/><text x="'+sx+'" y="'+(sy(i)+4)+'" text-anchor="middle" font-size="12">S'+(i+1)+'</text><text class="lbl" x="'+(sx-22)+'" y="'+(sy(i)+4)+'" text-anchor="end">'+(sim.u?'u='+fmt(sim.u[i]):S[i])+'</text>';
+  for(let j=0;j<N;j++)g+='<circle cx="'+dx+'" cy="'+dy(j)+'" r="15" fill="var(--soft)" stroke="var(--fg)"/><text x="'+dx+'" y="'+(dy(j)+4)+'" text-anchor="middle" font-size="12">D'+(j+1)+'</text><text class="lbl" x="'+(dx+22)+'" y="'+(dy(j)+4)+'">'+(sim.u?'v='+fmt(sim.v[j]):D[j])+'</text>';
+  sv.innerHTML=g;
+}
+
+/* ---------- Lab 2 ---------- */
+let opt=null;
+function renderShadow(){
+  const i=+$('shS').value,j=+$('shD').value,K=+$('shK').value;$('shKv').textContent=K;
+  const price=opt.u[i]+opt.v[j];const pts=[];
+  for(let k=0;k<=40;k++){const s=S.slice(),d=D.slice();s[i]+=k;d[j]+=k;const r=solve(s,d);pts.push([k,r.cost-opt.cost,k*price]);}
+  const act=pts[K][1],pred=pts[K][2];const ok=Math.abs(act-pred)<1e-6;
+  let br=null;for(const p of pts)if(Math.abs(p[1]-p[2])>1e-6){br=p[0];break;}
+  const st=$('shStatus');st.className='status '+(ok?'ok':'warn');
+  st.innerHTML=ok?'Prediction holds. Adding '+K+' unit'+(K>1?'s':'')+' at S'+(i+1)+' and D'+(j+1)+' changes the cost by exactly '+K+' × (u'+(i+1)+' + v'+(j+1)+') = '+fmt(pred)+'.'+(br?' It breaks from k = '+br+', where the optimal basis changes.':' It holds for every k shown here.')
+     :'Prediction fails. The basis that was optimal at k = 0 is no longer optimal, so the shadow prices no longer apply (Lecture 27). Predicted '+fmt(pred)+', actual '+fmt(act)+'.';
+  $('shKV').innerHTML='<dt>Price of the pair u<sub>i</sub> + v<sub>j</sub></dt><dd>'+fmt(opt.u[i])+' + '+fmt(opt.v[j])+' = '+fmt(price)+'</dd><dt>Predicted change</dt><dd>'+fmt(pred)+'</dd><dt>Actual change (re-solved)</dt><dd>'+fmt(act)+'</dd><dt>New optimal cost</dt><dd>'+fmt(opt.cost+act)+'</dd>';
+  // chart
+  const W=420,H=210,L=46,R=12,T=14,Bm=30;const ys=pts.flatMap(p=>[p[1],p[2]]);let lo=Math.min(0,...ys),hi=Math.max(0,...ys);if(hi-lo<1){hi+=1;}
+  const X=k=>L+(W-L-R)*k/40,Y=y=>T+(H-T-Bm)*(hi-y)/(hi-lo);let g='';
+  [lo,(lo+hi)/2,hi].forEach(y=>{g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(y)+'" y2="'+Y(y)+'" stroke="var(--line)"/><text class="lbl" x="'+(L-6)+'" y="'+(Y(y)+4)+'" text-anchor="end">'+fmt(y)+'</text>';});
+  [0,10,20,30,40].forEach(k=>g+='<text class="lbl" x="'+X(k)+'" y="'+(H-12)+'" text-anchor="middle">'+k+'</text>');
+  g+='<text class="lbl" x="'+(W-R)+'" y="'+(H-1)+'" text-anchor="end">extra units k</text>';
+  const line=(idx,col,dash)=>'<polyline fill="none" stroke="'+col+'" stroke-width="2"'+(dash?' stroke-dasharray="5 4"':'')+' points="'+pts.map(p=>X(p[0])+','+Y(p[idx])).join(' ')+'"/>';
+  g+=line(2,'var(--muted)',true)+line(1,'var(--accent)',false);
+  g+='<circle cx="'+X(K)+'" cy="'+Y(act)+'" r="4.5" fill="var(--accent)"/>';
+  if(br)g+='<line x1="'+X(br)+'" x2="'+X(br)+'" y1="'+T+'" y2="'+(H-Bm)+'" stroke="var(--neg)" stroke-dasharray="3 3"/><text class="lbl" x="'+(X(br)+4)+'" y="'+(T+12)+'" style="fill:var(--neg)">optimal basis changes</text>';
+  g+='<line x1="'+(W-R-150)+'" x2="'+(W-R-132)+'" y1="'+(H-Bm-30)+'" y2="'+(H-Bm-30)+'" stroke="var(--accent)" stroke-width="2"/><text class="lbl" x="'+(W-R-126)+'" y="'+(H-Bm-26)+'">actual (re-solved)</text><line x1="'+(W-R-150)+'" x2="'+(W-R-132)+'" y1="'+(H-Bm-14)+'" y2="'+(H-Bm-14)+'" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4"/><text class="lbl" x="'+(W-R-126)+'" y="'+(H-Bm-10)+'">predicted k(u'+(i+1)+' + v'+(j+1)+')</text>';
+  $('shChart').innerHTML=g;
+}
+
+/* ---------- Lab 3: log-domain Sinkhorn ---------- */
+const epsOf=v=>Math.pow(10,-1.7+2.4*v/1000); // 0.02 .. 5
+function sinkhorn(eps){
+  let f=Array(M).fill(0),g=Array(N).fill(0);const lse=a=>{const m=Math.max(...a);return m+Math.log(a.reduce((p,q)=>p+Math.exp(q-m),0))};
+  for(let it=0;it<20000;it++){
+    for(let i=0;i<M;i++)f[i]=eps*Math.log(S[i])-eps*lse(g.map((gj,j)=>(gj-C[i][j])/eps));
+    let err=0;for(let j=0;j<N;j++){const ng=eps*Math.log(D[j])-eps*lse(f.map((fi,i)=>(fi-C[i][j])/eps));err=Math.max(err,Math.abs(ng-g[j]));g[j]=ng;}
+    if(err<1e-10)break;}
+  const P=[...Array(M)].map((_,i)=>[...Array(N)].map((_,j)=>Math.exp((f[i]+g[j]-C[i][j])/eps)));
+  const t=f[0];return {P,u:f.map(x=>x-t),v:g.map(x=>x+t),cost:cost(P)};
+}
+let curve=[];
+function buildCurve(){curve=[];for(let k=0;k<=40;k++){const e=epsOf(k*25);curve.push([e,sinkhorn(e).cost]);}}
+function renderSink(){
+  const eps=epsOf(+$('eps').value);$('epsV').textContent=eps<0.1?eps.toFixed(3):eps.toFixed(2);
+  const r=sinkhorn(eps);const sv=$('plan');let g='';const cx=j=>95+j*72,cy=i=>55+i*62;
+  const maxRc=Math.max(1e-9,...opt.r.flat().filter(x=>x!==null));
+  for(let j=0;j<N;j++)g+='<text x="'+cx(j)+'" y="18" text-anchor="middle" font-size="13" font-style="italic">D'+(j+1)+'</text>';
+  for(let i=0;i<M;i++){g+='<text x="28" y="'+(cy(i)+4)+'" text-anchor="middle" font-size="13" font-style="italic">S'+(i+1)+'</text>';
+    for(let j=0;j<N;j++){const val=r.P[i][j],rc=opt.r[i][j]===null?0:opt.r[i][j];
+      g+='<rect x="'+(cx(j)-36)+'" y="'+(cy(i)-31)+'" width="72" height="62" fill="none" stroke="var(--line)"/>';
+      const rad=Math.max(0.8,27*Math.sqrt(val/Math.max(...S,...D)));const col=rc<=1e-9?'var(--pos)':'var(--neg)';const op=rc<=1e-9?0.9:0.35+0.6*Math.min(1,rc/maxRc);
+      g+='<circle cx="'+cx(j)+'" cy="'+cy(i)+'" r="'+rad.toFixed(2)+'" fill="'+col+'" fill-opacity="'+op.toFixed(2)+'"/>';
+      g+='<text class="lbl" x="'+(cx(j)+33)+'" y="'+(cy(i)+27)+'" text-anchor="end">'+(val<0.05?'<0.1':val.toFixed(1))+'</text>';}}
+  sv.innerHTML=g;
+  const used=r.P.flat().filter(x=>x>=0.05).length;
+  $('skKV').innerHTML='<dt>Sinkhorn cost</dt><dd>'+r.cost.toFixed(2)+'</dd><dt>Exact optimum</dt><dd>'+fmt(opt.cost)+' (gap '+(r.cost-opt.cost).toFixed(2)+')</dd><dt>Routes with ≥ 0.05 units</dt><dd>'+used+' of '+(M*N)+' (exact: '+opt.B.filter(([i,j])=>opt.x[i][j]>0).length+')</dd><dt>Entropic prices, u₁ = 0</dt><dd>u = ('+r.u.map(x=>x.toFixed(2)).join(', ')+')<br>v = ('+r.v.map(x=>x.toFixed(2)).join(', ')+')</dd><dt>MODI prices</dt><dd>u = ('+opt.u.map(x=>fmt(x)).join(', ')+')<br>v = ('+opt.v.map(x=>fmt(x)).join(', ')+')</dd>';
+  // cost vs eps chart (log x)
+  const W=360,H=170,L=42,R=10,T=12,Bm=28;const lx=e=>L+(W-L-R)*(Math.log10(e)+1.7)/2.4;
+  const cs=curve.map(c=>c[1]);const lo=opt.cost,hi=Math.max(...cs);const Y=y=>T+(H-T-Bm)*(hi-y)/Math.max(1e-6,hi-lo);
+  let h='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(lo)+'" y2="'+Y(lo)+'" stroke="var(--pos)" stroke-dasharray="4 3"/><text class="lbl" x="'+(W-R)+'" y="'+(Y(lo)-5)+'" text-anchor="end" style="fill:var(--pos)">exact '+fmt(lo)+'</text>';
+  h+='<text class="lbl" x="'+(L-6)+'" y="'+(Y(hi)+4)+'" text-anchor="end">'+hi.toFixed(0)+'</text><text class="lbl" x="'+(L-6)+'" y="'+(Y(lo)+4)+'" text-anchor="end">'+lo.toFixed(0)+'</text>';
+  [0.02,0.1,1,5].forEach(e=>h+='<text class="lbl" x="'+lx(e)+'" y="'+(H-10)+'" text-anchor="middle">'+e+'</text>');
+  h+='<text class="lbl" x="'+(W-R)+'" y="'+(H)+'" text-anchor="end">ε (log scale)</text>';
+  h+='<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="'+curve.map(c=>lx(c[0])+','+Y(c[1])).join(' ')+'"/>';
+  h+='<circle cx="'+lx(eps)+'" cy="'+Y(r.cost)+'" r="5" fill="var(--accent)"/><text class="lbl" x="'+(L+4)+'" y="'+(T+8)+'">Sinkhorn cost</text>';
+  $('epsChart').innerHTML=h;
+}
+
+/* ---------- data editing ---------- */
+function renderData(){
+  let h='<tr><th></th>'+[...Array(N)].map((_,j)=>'<th>D'+(j+1)+'</th>').join('')+'<th>s<sub>i</sub></th></tr>';
+  for(let i=0;i<M;i++){h+='<tr><th>S'+(i+1)+'</th>';for(let j=0;j<N;j++)h+='<td><input class="num cnum" id="c'+i+j+'" aria-label="cost S'+(i+1)+' to D'+(j+1)+'" value="'+C[i][j]+'"></td>';
+    h+='<td class="edge"><input class="num" id="s'+i+'" aria-label="supply S'+(i+1)+'" value="'+S[i]+'"></td></tr>';}
+  h+='<tr><th>d<sub>j</sub></th>'+D.map((x,j)=>'<td class="edge"><input class="num" id="d'+j+'" aria-label="demand D'+(j+1)+'" value="'+x+'"></td>').join('')+'</tr>';
+  $('dataTable').innerHTML=h;
+  $('dataTable').querySelectorAll('input').forEach(el=>el.addEventListener('change',readData));
+}
+function readData(){
+  const num=id=>{const v=Math.round(Number($(id).value));return Number.isFinite(v)?v:NaN};
+  const s=[...Array(M)].map((_,i)=>num('s'+i)),d=[...Array(N)].map((_,j)=>num('d'+j)),c=[...Array(M)].map((_,i)=>[...Array(N)].map((_,j)=>num('c'+i+j)));
+  const pill=$('balPill');
+  if([...s,...d].some(x=>!(x>0))||c.flat().some(x=>!(x>=0)&&!(x<0))){pill.textContent='enter whole numbers, supplies and demands above 0';pill.className='pill bad';return;}
+  if(sum(s)!==sum(d)){pill.textContent='supply '+sum(s)+' ≠ demand '+sum(d);pill.className='pill bad';return;}
+  if(c.flat().some(x=>Math.abs(x)>50)){pill.textContent='keep costs between −50 and 50';pill.className='pill bad';return;}
+  S=s;D=d;C=c;pill.textContent='balanced, total '+sum(S);pill.className='pill ok';init(false);
+}
+function init(redrawData){
+  if(redrawData)renderData();
+  opt=solve(S,D);restartSim();
+  $('shS').innerHTML=S.map((_,i)=>'<option value="'+i+'">S'+(i+1)+'</option>').join('');
+  $('shD').innerHTML=D.map((_,j)=>'<option value="'+j+'">D'+(j+1)+'</option>').join('');
+  renderShadow();buildCurve();renderSink();
+}
+$('stepBtn').onclick=step;
+$('solveBtn').onclick=()=>{for(let k=0;k<600&&phase!=='done';k++)step();};
+$('restartBtn').onclick=restartSim;
+$('resetBtn').onclick=()=>{S=EX.s.slice();D=EX.d.slice();C=EX.C.map(r=>r.slice());$('balPill').textContent='balanced, total 75';$('balPill').className='pill ok';init(true);};
+['shS','shD','shK'].forEach(id=>$(id).addEventListener('input',renderShadow));
+$('eps').addEventListener('input',renderSink);
+$('balPill').textContent='balanced, total 75';$('balPill').className='pill ok';
+init(true);
+</script>
+
+</body>
+</html>
